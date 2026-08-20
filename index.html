@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Interactive client for the Security API Exercise" />
+    <title>Security API Exercise</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <a class="brand" href=".">
+          <span class="brand-mark" aria-hidden="true">//</span>
+          <span>security.api</span>
+        </a>
+        <span class="exercise-label">authentication lab <span aria-hidden="true">/</span> 01</span>
+      </header>
+
+      <section class="intro" aria-labelledby="page-title">
+        <div class="intro-copy">
+          <p class="eyebrow"><span class="status-dot"></span> local endpoint console</p>
+          <h1 id="page-title">See the request.<br /><em>Understand the key.</em></h1>
+          <p class="lede">A small client for exploring how a custom <code>x-api-key</code> header protects an API endpoint.</p>
+        </div>
+        <div class="intro-aside" aria-label="API status">
+          <span class="aside-label">transport</span>
+          <strong>HTTP / JSON</strong>
+          <span class="aside-rule"></span>
+          <span class="aside-label">backend</span>
+          <strong>FastAPI</strong>
+        </div>
+      </section>
+
+      <section class="workspace" aria-label="API request console">
+        <div class="request-panel panel">
+          <div class="panel-heading">
+            <div>
+              <p class="section-index">01 <span>/</span> request setup</p>
+              <h2>Configure the client</h2>
+            </div>
+            <span class="lock-icon" aria-hidden="true">&#9632;</span>
+          </div>
+
+          <form id="request-form">
+            <label for="api-url">API base URL</label>
+            <input id="api-url" name="api-url" type="url" value="http://127.0.0.1:8000" autocomplete="url" required />
+
+            <label for="api-key">x-api-key value</label>
+            <div class="key-input">
+              <input id="api-key" name="api-key" type="password" value="security-exercise-key-2026" autocomplete="off" required />
+              <button class="icon-button" id="toggle-key" type="button" title="Show API key" aria-label="Show API key">&#9673;</button>
+            </div>
+
+            <div class="request-actions">
+              <button class="action-button primary" id="get-data" type="button"><span>GET</span> Protected data <b aria-hidden="true">&#8594;</b></button>
+              <button class="action-button secondary" id="post-data" type="button"><span>POST</span> Send request <b aria-hidden="true">&#8594;</b></button>
+            </div>
+          </form>
+
+          <div class="hint"><span aria-hidden="true">i</span> Both protected routes use the same header. Try changing the key to observe a <code>401</code> response.</div>
+        </div>
+
+        <div class="response-panel panel">
+          <div class="panel-heading response-heading">
+            <div>
+              <p class="section-index">02 <span>/</span> response</p>
+              <h2>Server says</h2>
+            </div>
+            <span class="response-code" id="response-code">—</span>
+          </div>
+          <div class="response-meta">
+            <span id="response-method">WAITING</span>
+            <span id="response-url">No request made</span>
+          </div>
+          <pre id="response-output" aria-live="polite">Run a request to inspect the JSON response.</pre>
+          <div class="response-footer"><span class="pulse"></span><span id="response-status">Ready for input</span></div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <span>Security API Exercise</span>
+        <span>API key authentication anti-pattern</span>
+      </footer>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>
