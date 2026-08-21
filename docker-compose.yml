@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nginx_frontend
+    ports:
+      # Format: "HOST_PORT:CONTAINER_PORT"
+      # Changed host port from 8080 to 8085 to avoid conflicts with Oracle DB on 8080
+      - "8085:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - .env
+    environment:
+      - API_KEY=${API_KEY:-security-exercise-key-2026}
+      - BACKEND_HOST=${BACKEND_HOST:-host.docker.internal}
+      - BACKEND_PORT=${BACKEND_PORT:-8000}
+    restart: unless-stopped

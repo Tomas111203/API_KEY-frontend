@@ -46,13 +46,13 @@
           </div>
 
           <form id="request-form">
-            <label for="api-url">API base URL</label>
-            <input id="api-url" name="api-url" type="url" value="http://127.0.0.1:8000" autocomplete="url" required />
+            <label for="api-url">API Base Path / URL</label>
+            <input id="api-url" name="api-url" type="text" value="" placeholder="Default: relative Nginx proxy (/)" autocomplete="off" />
 
-            <label for="api-key">x-api-key value</label>
+            <label for="api-key">x-api-key Header (Managed by Nginx Proxy)</label>
             <div class="key-input">
-              <input id="api-key" name="api-key" type="password" value="security-exercise-key-2026" autocomplete="off" required />
-              <button class="icon-button" id="toggle-key" type="button" title="Show API key" aria-label="Show API key">&#9673;</button>
+              <input id="api-key" name="api-key" type="text" value="Injected server-side by Nginx" autocomplete="off" disabled readonly />
+              <button class="icon-button" id="toggle-key" type="button" title="Show API key" aria-label="Show API key" disabled>&#9673;</button>
             </div>
 
             <div class="request-actions">
@@ -61,7 +61,7 @@
             </div>
           </form>
 
-          <div class="hint"><span aria-hidden="true">i</span> Both protected routes use the same header. Try changing the key to observe a <code>401</code> response.</div>
+          <div class="hint"><span aria-hidden="true">i</span> The client browser does not send the <code>x-api-key</code> header. Nginx reverse proxy injects it automatically before forwarding to backend.</div>
         </div>
 
         <div class="response-panel panel">

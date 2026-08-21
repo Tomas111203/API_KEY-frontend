@@ -19,33 +19,32 @@ function setResponseState({ method, url, code, statusText, body }) {
 }
 
 async function sendRequest(method) {
-  const baseUrl = apiUrlInput.value.trim().replace(/\/$/, "");
-  const endpoint = `${baseUrl}/api/data`;
-  const apiKey = apiKeyInput.value;
-
-  if (!baseUrl || !apiKey) {
-    setResponseState({
-      method,
-      url: endpoint,
-      code: "—",
-      statusText: "Missing request settings",
-      body: JSON.stringify({ error: "Enter both an API base URL and an API key." }, null, 2),
-    });
-    return;
-  }
+  const rawUrl = apiUrlInput ? apiUrlInput.value.trim().replace(/\/$/, "") : "";
+  const endpoint = rawUrl ? `${rawUrl}/api/data` : "/api/data";
 
   buttons.forEach((button) => { button.disabled = true; });
-  setResponseState({ method, url: endpoint, code: "...", statusText: "Request in progress", body: "Contacting the API..." });
+  setResponseState({
+    method,
+    url: endpoint,
+    code: "...",
+    statusText: "Request in progress",
+    body: "Sending request through Nginx reverse proxy...",
+  });
 
   try {
+    // API key is injected by Nginx proxy; no x-api-key header is attached by client JavaScript.
     const response = await fetch(endpoint, {
       method,
-      headers: { "x-api-key": apiKey },
+      headers: {
+        "Content-Type": "application/json",
+      },
     });
+
     const contentType = response.headers.get("content-type") || "";
     const responseBody = contentType.includes("application/json")
       ? await response.json()
       : await response.text();
+
     const formattedBody = typeof responseBody === "string"
       ? responseBody
       : JSON.stringify(responseBody, null, 2);
@@ -63,19 +62,25 @@ async function sendRequest(method) {
       url: endpoint,
       code: "ERR",
       statusText: "Could not reach API",
-      body: JSON.stringify({ error: "The API is unavailable. Start uvicorn and check the base URL.", detail: error.message }, null, 2),
+      body: JSON.stringify({
+        error: "The API or Nginx reverse proxy is unavailable.",
+        detail: error.message,
+      }, null, 2),
     });
   } finally {
     buttons.forEach((button) => { button.disabled = false; });
   }
 }
 
-toggleKeyButton.addEventListener("click", () => {
-  const isHidden = apiKeyInput.type === "password";
-  apiKeyInput.type = isHidden ? "text" : "password";
-  toggleKeyButton.title = isHidden ? "Hide API key" : "Show API key";
-  toggleKeyButton.setAttribute("aria-label", toggleKeyButton.title);
-});
+if (toggleKeyButton && apiKeyInput) {
+  toggleKeyButton.addEventListener("click", () => {
+    const isHidden = apiKeyInput.type === "password";
+    apiKeyInput.type = isHidden ? "text" : "password";
+    toggleKeyButton.title = isHidden ? "Hide API key" : "Show API key";
+    toggleKeyButton.setAttribute("aria-label", toggleKeyButton.title);
+  });
+}
 
 getButton.addEventListener("click", () => sendRequest("GET"));
 postButton.addEventListener("click", () => sendRequest("POST"));
+
