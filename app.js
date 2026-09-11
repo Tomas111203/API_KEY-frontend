@@ -1,5 +1,6 @@
 const apiUrlInput = document.querySelector("#api-url");
 const apiKeyInput = document.querySelector("#api-key");
+const dbMessageInput = document.querySelector("#db-message");
 const toggleKeyButton = document.querySelector("#toggle-key");
 const getButton = document.querySelector("#get-data");
 const postButton = document.querySelector("#post-data");
@@ -28,17 +29,28 @@ async function sendRequest(method) {
     url: endpoint,
     code: "...",
     statusText: "Request in progress",
-    body: "Sending request through Nginx reverse proxy...",
+    body: method === "POST"
+      ? "Cifrando datos y guardando en la base de datos SQL..."
+      : "Consultando y descifrando registros de la base de datos SQL...",
   });
 
   try {
-    // API key is injected by Nginx proxy; no x-api-key header is attached by client JavaScript.
-    const response = await fetch(endpoint, {
+    const requestOptions = {
       method,
       headers: {
         "Content-Type": "application/json",
       },
-    });
+    };
+
+    if (method === "POST") {
+      const messageText = dbMessageInput ? dbMessageInput.value.trim() : "";
+      requestOptions.body = JSON.stringify({
+        message: messageText || "Mensaje guardado en base de datos SQL",
+      });
+    }
+
+    // API key is injected by Nginx proxy; no x-api-key header is attached by client JavaScript.
+    const response = await fetch(endpoint, requestOptions);
 
     const contentType = response.headers.get("content-type") || "";
     const responseBody = contentType.includes("application/json")
@@ -53,7 +65,7 @@ async function sendRequest(method) {
       method,
       url: endpoint,
       code: response.status,
-      statusText: response.ok ? "Request completed" : "Request rejected",
+      statusText: response.ok ? "Operación exitosa" : "Petición rechazada",
       body: formattedBody,
     });
   } catch (error) {
@@ -61,9 +73,9 @@ async function sendRequest(method) {
       method,
       url: endpoint,
       code: "ERR",
-      statusText: "Could not reach API",
+      statusText: "Error de conexión",
       body: JSON.stringify({
-        error: "The API or Nginx reverse proxy is unavailable.",
+        error: "No se pudo conectar con la API o el proxy Nginx.",
         detail: error.message,
       }, null, 2),
     });
@@ -83,4 +95,28 @@ if (toggleKeyButton && apiKeyInput) {
 
 getButton.addEventListener("click", () => sendRequest("GET"));
 postButton.addEventListener("click", () => sendRequest("POST"));
+
+document.addEventListener("DOMContentLoaded", () => {
+  const userBadge = document.querySelector("#user-badge");
+  const logoutBtn = document.querySelector("#logout-btn");
+
+  const rawUser = sessionStorage.getItem("ldap_user");
+  if (rawUser) {
+    try {
+      const userData = JSON.parse(rawUser);
+      if (userBadge) {
+        userBadge.textContent = `👤 ${userData.username}`;
+      }
+    } catch (e) {
+      if (userBadge) userBadge.textContent = "👤 Usuario";
+    }
+  }
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      sessionStorage.removeItem("ldap_user");
+      window.location.href = "login.html";
+    });
+  }
+});
 

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="LDAP Authentication Login - Security API Exercise" />
+    <title>Inicio de Sesión LDAP — Security API Exercise</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <a class="brand" href="login.html">
+          <span class="brand-mark" aria-hidden="true">//</span>
+          <span>security.api</span>
+        </a>
+        <span class="exercise-label">autenticación ldap <span aria-hidden="true">/</span> 02</span>
+      </header>
+
+      <section class="intro" aria-labelledby="page-title">
+        <div class="intro-copy">
+          <p class="eyebrow"><span class="status-dot"></span> control de acceso seguro</p>
+          <h1 id="page-title">Valida tus credenciales.<br /><em>Accede a las funciones.</em></h1>
+          <p class="lede">Ingrese sus credenciales corporativas LDAP para autenticarse a través del servicio protegido por API Key antes de acceder a la consola de encriptado.</p>
+        </div>
+        <div class="intro-aside" aria-label="LDAP status">
+          <span class="aside-label">servicio</span>
+          <strong>OpenLDAP</strong>
+          <span class="aside-rule"></span>
+          <span class="aside-label">seguridad</span>
+          <strong>Rotación API Key</strong>
+        </div>
+      </section>
+
+      <section class="workspace single-column" aria-label="Formulario de Login">
+        <div class="request-panel panel login-card">
+          <div class="panel-heading">
+            <div>
+              <p class="section-index">01 <span>/</span> autenticación ldap</p>
+              <h2>Iniciar Sesión</h2>
+            </div>
+            <span class="lock-icon" aria-hidden="true">&#9632;</span>
+          </div>
+
+          <form id="login-form">
+            <label for="username">Usuario LDAP (uid)</label>
+            <input id="username" name="username" type="text" value="alice" placeholder="Ejemplo: alice, bob" required autocomplete="username" />
+
+            <label for="password">Contraseña</label>
+            <div class="key-input">
+              <input id="password" name="password" type="password" value="alice123" placeholder="Ingrese su contraseña" required autocomplete="current-password" />
+              <button class="icon-button" id="toggle-password" type="button" title="Mostrar contraseña" aria-label="Mostrar contraseña">&#9673;</button>
+            </div>
+
+            <div class="request-actions">
+              <button class="action-button primary" id="login-submit" type="submit">
+                <span>POST</span> Iniciar Sesión con LDAP <b aria-hidden="true">&#8594;</b>
+              </button>
+            </div>
+          </form>
+
+          <div id="login-status-box" class="status-box hidden" aria-live="polite"></div>
+
+          <div class="hint">
+            <span aria-hidden="true">i</span>
+            <div>
+              <strong>Credenciales de prueba del laboratorio:</strong><br />
+              &bull; Usuario: <code>alice</code> | Contraseña: <code>alice123</code><br />
+              &bull; Usuario: <code>bob</code> | Contraseña: <code>bob123</code>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <span>Security API Exercise</span>
+        <span>Autenticación LDAP + API Key Rotada</span>
+      </footer>
+    </main>
+    <script src="login.js"></script>
+  </body>
+</html>

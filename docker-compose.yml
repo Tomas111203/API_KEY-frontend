@@ -1,21 +1,78 @@
 version: '3.8'
 
 services:
+  backend:
+    build:
+      context: ../API_KEY
+      dockerfile: Dockerfile
+    container_name: fastapi_backend
+    env_file:
+      - .env
+    environment:
+      - API_SECRET=${API_SECRET:-security-exercise-key-2026}
+      - DATABASE_ENCRYPTION_KEY=${DATABASE_ENCRYPTION_KEY:-my-super-secret-db-key-32byteslong!}
+    volumes:
+      - backend_data:/app/data
+      - shared_config:/shared
+    restart: unless-stopped
+
+  openldap:
+    image: osixia/openldap:1.5.0
+    container_name: openldap
+    hostname: ldap.example.com
+    environment:
+      LDAP_ORGANISATION: "Example Corp"
+      LDAP_DOMAIN: "example.com"
+      LDAP_ADMIN_PASSWORD: "adminpassword"
+      LDAP_TLS: "false"
+    ports:
+      - "389:389"
+    volumes:
+      - ldap_data:/var/lib/ldap
+      - ldap_config:/etc/ldap/slapd.d
+    restart: unless-stopped
+
+  ldap-api:
+    build:
+      context: ../ldap/fastapi
+      dockerfile: Dockerfile
+    container_name: ldap-api
+    environment:
+      - LDAP_HOST=openldap
+      - LDAP_PORT=389
+      - LDAP_BASE_DN=dc=example,dc=com
+      - API_SECRET=${API_SECRET:-security-exercise-key-2026}
+    volumes:
+      - shared_config:/shared
+    depends_on:
+      - openldap
+    restart: unless-stopped
+
   frontend:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: nginx_frontend
     ports:
-      # Format: "HOST_PORT:CONTAINER_PORT"
-      # Changed host port from 8080 to 8085 to avoid conflicts with Oracle DB on 8080
       - "8085:80"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    depends_on:
+      - backend
+      - ldap-api
     env_file:
       - .env
     environment:
-      - API_KEY=${API_KEY:-security-exercise-key-2026}
-      - BACKEND_HOST=${BACKEND_HOST:-host.docker.internal}
-      - BACKEND_PORT=${BACKEND_PORT:-8000}
+      - API_SECRET=${API_SECRET:-security-exercise-key-2026}
+      - BACKEND_HOST=backend
+      - BACKEND_PORT=8000
+      - LDAP_HOST=ldap-api
+      - LDAP_PORT=8000
+    volumes:
+      - shared_config:/shared
     restart: unless-stopped
+
+volumes:
+  backend_data:
+  shared_config:
+  ldap_data:
+  ldap_config:
+

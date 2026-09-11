@@ -1,90 +1,147 @@
-# Frontend API Key Authentication with Nginx & Docker
+# Security API Exercise — Frontend & Reverse Proxy
 
-This repository provides a containerized web frontend protected by an **Nginx reverse proxy**. The proxy injects sensitive `x-api-key` headers on server-side requests forwarded to the backend API. This security architecture prevents API keys from being exposed to client-side JavaScript or browser network tools.
+This repository provides a containerized web frontend protected by an **Nginx reverse proxy** integrated with **LDAP Authentication** and **Automatic API Key Rotation**.
+
+The Nginx reverse proxy injects sensitive `x-api-key` headers on server-side requests forwarded to both the main Backend API (`/api/`) and the LDAP Authentication API (`/ldap/`). This architecture prevents API keys from being exposed to client-side JavaScript or browser network tools.
 
 ---
 
-## 🌐 Networking Architecture
+## 🌐 Architecture Overview
 
-### 1. Accessing Frontend from Your Browser (Port Mapping)
-The container maps host port `8085` on your computer to port `80` inside the Nginx container:
-```yaml
-ports:
-  - "8085:80"  # Format: "HOST_PORT:CONTAINER_PORT"
+```text
+                                +-------------------+
+                                |    User Browser   |
+                                +---------+---------+
+                                          |
+                        http://localhost:8085 (HTTP/80)
+                                          v
+                                +-------------------+
+                                |   Nginx Frontend  |
+                                |  + rotate_key.py  |
+                                +----+---------+----+
+                                     |         |
+                  /api/ (Injected    |         | /ldap/ (Injected
+                  x-api-key Header)  |         | x-api-key Header)
+                                     v         v
+                      +------------------+ +------------------+
+                      | FastAPI Backend  | |  LDAP FastAPI    |
+                      | (SQLite Encrypted| | (Auth API)       |
+                      |      Data)       | +--------+---------+
+                      +------------------+          | LDAP :389
+                                                    v
+                                           +------------------+
+                                           | OpenLDAP Server  |
+                                           +------------------+
 ```
-When you open **`http://localhost:8085`** in your browser, your request reaches Nginx serving the static frontend files (`index.html`, `app.js`, `styles.css`).
 
-> **Note**: Port `8085` is used on host to avoid port conflicts with services like Oracle DB (port 8080). You can change the left side (`HOST_PORT`) in `docker-compose.yml` to any free port without modifying the Dockerfile.
-
-### 2. Connecting Docker Nginx to Local Uvicorn Backend
-Inside a Docker container, `127.0.0.1` refers to the container itself.
-To reach Uvicorn running natively on your machine on port `8000`:
-- Set **`BACKEND_HOST=host.docker.internal`** in `.env`.
-- `host.docker.internal` resolves to your host machine's IP address.
-- Nginx proxies `/api/` requests to `http://host.docker.internal:8000/api/` while attaching the `x-api-key` header.
+### Key Components:
+1. **Frontend UI (`login.html` & `index.html`)**:
+   - `login.html`: Login layout for entering LDAP credentials (`alice` / `alice123` or `bob` / `bob123`).
+   - `index.html`: Main console for SQL database encryption/decryption, guarded by LDAP session authentication.
+2. **Nginx Reverse Proxy**:
+   - Proxies `/api/` requests to `fastapi_backend:8000`.
+   - Proxies `/ldap/` requests to `ldap-api:8000`.
+   - Automatically injects `x-api-key` header server-side.
+3. **Automatic Secret Rotation (`rotate_key.py`)**:
+   - Runs as a background daemon every 2 minutes (120 seconds).
+   - Generates a new `API_SECRET`, updates `/shared/api_secret.txt`, updates Nginx configuration, and gracefully reloads Nginx.
+4. **LDAP Authentication Service (`ldap-api`)**:
+   - Validates `x-api-key` dynamically against `/shared/api_secret.txt`.
+   - Authenticates credentials against the `openldap` container.
 
 ---
 
 ## 🔒 Security Features
 
-1. **Server-Side API Key Injection**: Client JavaScript (`app.js`) sends keyless requests to relative path `/api/data`.
-2. **Reverse Proxy Masking**: Nginx receives `/api/` requests, injects `proxy_set_header x-api-key "${API_KEY}";`, and forwards them to the backend server.
-3. **Environment Secret Management**: Sensitive credentials are read from `.env` instead of being hardcoded.
-4. **Git Protection**: `.env` is listed in `.gitignore` to prevent secret leaks to version control repositories.
+- **Client-Side Key Erasure**: JavaScript sends keyless requests; Nginx handles secret injection.
+- **Dynamic API Key Rotation**: Keys rotate every 120 seconds without service downtime.
+- **Shared Volume Sync**: Both `fastapi_backend` and `ldap-api` share `/shared/api_secret.txt` to validate rotated keys instantaneously.
+- **Session Protection**: `index.html` requires an active LDAP session in `sessionStorage`.
 
 ---
 
 ## 📁 Repository Structure
 
 ```text
-├── .env                  # Local secret configuration (ignored by Git)
-├── .env.example          # Template environment file (committed to Git)
-├── .gitignore            # Git exclusion list
-├── Dockerfile            # Nginx Alpine container definition
-├── docker-compose.yml    # Docker Compose orchestration
-├── docker-entrypoint.sh  # Startup script for envsubst variable injection
+frontend API_KEY/
+├── .env                  # Local environment configuration
+├── .env.example          # Environment template file
+├── Dockerfile            # Nginx Alpine container with Python & gettext
+├── docker-compose.yml    # Orchestrates frontend, backend, openldap, and ldap-api
+├── docker-entrypoint.sh  # Startup script & background daemon launcher
 ├── nginx.conf.template   # Nginx template configuration
-├── index.html            # User interface HTML
-├── app.js                # Client logic (API key free)
-└── styles.css            # Application stylesheet
+├── rotate_key.py         # 2-minute key rotation daemon
+├── login.html            # LDAP Login layout UI
+├── login.js              # LDAP authentication handler & session redirect
+├── index.html            # Main encryption console & session guard
+├── app.js                # Main application logic & user logout handler
+└── styles.css            # Unified design system stylesheet
 ```
 
 ---
 
 ## 🚀 Quick Start Guide
 
-### 1. Start your local Uvicorn backend
-In your backend directory, ensure Uvicorn is running:
+### 1. Launch All Services with Docker Compose
+
+From the `frontend API_KEY` directory, run:
+
 ```bash
-uvicorn main:app --host 0.0.0.0 --port 8000
+docker compose down -v
+docker compose up -d --build
 ```
 
-### 2. Configure Environment Variables
-Copy `.env.example` to create your local `.env` file:
-```bash
-cp .env.example .env
-```
-Ensure your `.env` contains:
-```env
-API_KEY=security-exercise-key-2026
-BACKEND_HOST=host.docker.internal
-BACKEND_PORT=8000
-```
+### 2. Access in Browser
 
-### 3. Build and Launch Frontend Container
-```bash
-docker compose up --build
-```
-
-### 4. Access in Browser
 Open your browser and navigate to:
 **`http://localhost:8085`**
 
+You will be presented with the **LDAP Login Page**.
+
+### 3. Test Credentials
+
+Use sample lab credentials:
+- **Username**: `alice` | **Password**: `alice123`
+- **Username**: `bob` | **Password**: `bob123`
+
+Upon successful authentication, you will be redirected to `index.html` where you can interact with the SQL database encryption/decryption functions.
+
 ---
 
-## 🔍 Verification
+## 🔍 Key Rotation Verification
 
-1. Open Browser Developer Tools (**F12**) -> **Network** tab.
-2. Click **GET Protected Data** or **POST Send Request**.
-3. Inspect outgoing requests: verify that **no `x-api-key` header** is sent from the browser.
-4. Nginx forwards the request to `http://host.docker.internal:8000/api/data` with the injected `x-api-key` header.
+### 1. Monitor Key Rotation Logs
+Watch the rotation daemon in real-time:
+```bash
+docker logs -f nginx_frontend
+```
+You will see a new `API_SECRET` generated every 2 minutes:
+```text
+[KEY ROTATION 🔄 2026-09-10 20:00:00] New API_SECRET generated: rotated-secret-a1b2c3d4e5f67890
+```
+
+### 2. Verify Key Sync inside LDAP Container
+Inspect the active secret inside the LDAP container:
+```bash
+docker exec ldap-api cat /shared/api_secret.txt
+```
+Run it again after 2 minutes to confirm the key has updated without container restarts.
+
+### 3. Verify Unauthorized Rejection (HTTP 401)
+Attempt to call the LDAP login endpoint directly without Nginx injection using a wrong key:
+```bash
+curl -i -X POST http://localhost:8000/login \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: invalid-key" \
+  -d '{"username":"alice","password":"alice123"}'
+```
+**Expected Response:** `401 Unauthorized`.
+
+### 4. Verify Proxy Injected Success (HTTP 200)
+Call through Nginx (which injects the rotated key):
+```bash
+curl -i -X POST http://localhost:8085/ldap/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"alice","password":"alice123"}'
+```
+**Expected Response:** `200 OK` with `"authenticated": true`.

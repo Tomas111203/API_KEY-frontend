@@ -5,11 +5,11 @@ server {
     # Serve frontend static assets (HTML, JS, CSS)
     location / {
         root /usr/share/nginx/html;
-        index index.html index.htm;
-        try_files $uri $uri/ /index.html;
+        index login.html index.html index.htm;
+        try_files $uri $uri/ /login.html;
     }
 
-    # Reverse proxy API requests to backend service with API key injection
+    # Reverse proxy API requests to backend service with API secret injection
     location /api/ {
         proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/api/;
         proxy_set_header Host $host;
@@ -17,7 +17,20 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
 
-        # Inject x-api-key header automatically on the server side
-        proxy_set_header x-api-key "${API_KEY}";
+        # Inject x-api-key header automatically on server side
+        proxy_set_header x-api-key "${API_SECRET}";
+    }
+
+    # Reverse proxy LDAP API requests to ldap service with API secret injection
+    location /ldap/ {
+        proxy_pass http://${LDAP_HOST}:${LDAP_PORT}/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Inject x-api-key header automatically on server side
+        proxy_set_header x-api-key "${API_SECRET}";
     }
 }
+
